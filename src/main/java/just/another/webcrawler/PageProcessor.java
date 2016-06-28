@@ -1,11 +1,13 @@
 package just.another.webcrawler;
 
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.LongAdder;
-import java.util.stream.Collectors;
+
+import static java.util.stream.Collectors.toSet;
 
 public class PageProcessor {
 
@@ -19,7 +21,7 @@ public class PageProcessor {
 
     public PageProcessor(String baseUrl) {
         this.baseUrl = baseUrl;
-        addTask(baseUrl);
+        addLinkToQueue(baseUrl);
     }
 
     public String getNextPage() throws InterruptedException {
@@ -29,7 +31,7 @@ public class PageProcessor {
     public void submitResult(String url, CrawlResult result) {
         results.put(url, result);
         for (String link : result.getInternalLinks()) {
-            addTask(link);
+            addLinkToQueue(link);
         }
 
         unprocessedPages.decrement();
@@ -38,23 +40,24 @@ public class PageProcessor {
         }
     }
 
-    private void addTask(String url) {
+    public Page getSiteMap() {
+        return getPageTree(baseUrl, new HashSet<>());
+    }
+
+    private void addLinkToQueue(String url) {
         if (!results.containsKey(url)) {
             unprocessedPages.increment();
             pageQueue.offer(url);
         }
     }
 
-    public Page getSiteMap() {
-        return getPageTree(baseUrl);
-    }
-
-    private Page getPageTree(String url) {
+    private Page getPageTree(String url, Set<String> parentLinks) {
         CrawlResult crawlResult = results.get(url);
-
-        //TODO: If page has already been crawled
-
-        Set<Page> pages = crawlResult.getInternalLinks().stream().map(this::getPageTree).collect(Collectors.toSet());
+        parentLinks.add(url);
+        Set<Page> pages = crawlResult.getInternalLinks().stream()
+                .filter(link -> !parentLinks.contains(link))
+                .map(link -> getPageTree(link, parentLinks))
+                .collect(toSet());
         return new Page(url, pages, crawlResult.getExternalLinks(), crawlResult.getImages());
     }
 
