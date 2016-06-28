@@ -87,6 +87,20 @@ public class pageProcessorTest {
         assertThat(taskManager.getSiteMap(), is(expectedPage));
     }
 
+    @Test
+    public void whenNoMoreInternalLinks_completeRetrievedFromQueue() throws Exception {
+        String internalLink = BASE_URL + "/internal-page";
+
+        String firstTask = taskManager.getNextPage();
+        taskManager.submitResult(firstTask, new CrawlResult(asSet(internalLink), emptySet(), emptySet()));
+        String secondTask = taskManager.getNextPage();
+        taskManager.submitResult(secondTask, new CrawlResult(emptySet(), emptySet(), emptySet()));
+        String noMorePages = taskManager.getNextPage();
+
+        assertThat(noMorePages, is(PageProcessor.COMPLETE));
+
+    }
+
     @SafeVarargs
     private static <T> Set<T> asSet(T... items) {
         return new HashSet<>(Arrays.asList(items));

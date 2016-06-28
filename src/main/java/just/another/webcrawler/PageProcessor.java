@@ -9,6 +9,9 @@ import java.util.stream.Collectors;
 
 public class PageProcessor {
 
+    // Used as a poisoned pill to instruct consumers of the queue that they can shut down
+    public static final String COMPLETE = "::COMPLETE::";
+
     private final String baseUrl;
     private final Map<String, CrawlResult> results = new ConcurrentHashMap<>();
     private final LinkedBlockingQueue<String> pageQueue = new LinkedBlockingQueue<>();
@@ -29,12 +32,10 @@ public class PageProcessor {
             addTask(link);
         }
 
-        // get the page with set result, for each internal link create a new page, add to the queue and increment pending pageQueue
-
-        // decrement pending pageQueue
-
-        // add poisoned pills if pending pageQueue == 0
-
+        unprocessedPages.decrement();
+        if(unprocessedPages.longValue() == 0) {
+            pageQueue.offer(COMPLETE);
+        }
     }
 
     private void addTask(String url) {
