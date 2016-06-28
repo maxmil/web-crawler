@@ -12,7 +12,7 @@ public class PageProcessor {
     private final String baseUrl;
     private final Map<String, CrawlResult> results = new ConcurrentHashMap<>();
     private final LinkedBlockingQueue<String> pageQueue = new LinkedBlockingQueue<>();
-    private final LongAdder pendingTasks = new LongAdder();
+    private final LongAdder unprocessedPages = new LongAdder();
 
     public PageProcessor(String baseUrl) {
         this.baseUrl = baseUrl;
@@ -39,7 +39,7 @@ public class PageProcessor {
 
     private void addTask(String url) {
         if (!results.containsKey(url)) {
-            pendingTasks.increment();
+            unprocessedPages.increment();
             pageQueue.offer(url);
         }
     }
