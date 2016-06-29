@@ -11,11 +11,11 @@ import static just.another.webcrawler.PageProcessor.COMPLETE;
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.*;
 
-public class pageProcessorTest {
+public class PageProcessorTest {
 
     private static final String BASE_URL = "http://www.someurl.com";
 
-    private PageProcessor pageProcessor = new PageProcessor(BASE_URL);
+    private PageProcessor pageProcessor = new PageProcessor(BASE_URL, 1);
 
     @Test
     public void getsStartingUrlAsFirstTask() throws Exception {
@@ -121,7 +121,6 @@ public class pageProcessorTest {
         String noMorePages = pageProcessor.getNextPage();
 
         assertThat(noMorePages, is(COMPLETE));
-
     }
 
     @SafeVarargs

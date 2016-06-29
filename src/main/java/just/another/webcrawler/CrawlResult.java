@@ -2,7 +2,12 @@ package just.another.webcrawler;
 
 import java.util.Set;
 
+import static java.util.Collections.emptySet;
+
 public class CrawlResult {
+
+    public static final CrawlResult EMPTY = new CrawlResult(emptySet(), emptySet(), emptySet());
+    public static final CrawlResult PENDING = new CrawlResult(emptySet(), emptySet(), emptySet());
 
     private final Set<String> internalLinks;
     private final Set<String> externalLinks;

@@ -5,7 +5,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.atomic.LongAdder;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static java.util.stream.Collectors.toSet;
 
@@ -17,27 +17,33 @@ public class PageProcessor {
     private final String baseUrl;
     private final Map<String, CrawlResult> results = new ConcurrentHashMap<>();
     private final LinkedBlockingQueue<String> pageQueue = new LinkedBlockingQueue<>();
-    private final LongAdder unprocessedPages = new LongAdder();
+    private final AtomicInteger unprocessedPages = new AtomicInteger();
+    private final int nConsumers;
 
-    public PageProcessor(String baseUrl) {
+    public PageProcessor(String baseUrl, int nConsumers) {
         this.baseUrl = baseUrl;
+        this.nConsumers = nConsumers;
         addLinkToQueue(baseUrl);
     }
 
-    public String getNextPage() throws InterruptedException {
-        return pageQueue.take();
+    public String getNextPage() {
+        try {
+            String url = pageQueue.take();
+            results.put(url, CrawlResult.PENDING);
+            return url;
+        } catch (InterruptedException e) {
+            throw new RuntimeException("Unable to get next page from process queue", e);
+        }
     }
 
     public void submitResult(String url, CrawlResult result) {
         results.put(url, result);
-        for (String link : result.getInternalLinks()) {
-            addLinkToQueue(link);
-        }
+        result.getInternalLinks().forEach(this::addLinkToQueue);
+        pageComplete();
+    }
 
-        unprocessedPages.decrement();
-        if(unprocessedPages.longValue() == 0) {
-            pageQueue.offer(COMPLETE);
-        }
+    public void submitError() {
+        pageComplete();
     }
 
     public Page getSiteMap() {
@@ -45,23 +51,40 @@ public class PageProcessor {
     }
 
     private void addLinkToQueue(String url) {
-        if (!results.containsKey(url)) {
-            unprocessedPages.increment();
-            pageQueue.offer(url);
+        if (results.putIfAbsent(url, CrawlResult.EMPTY) == null) {
+            unprocessedPages.incrementAndGet();
+            try {
+                pageQueue.put(url);
+            } catch (InterruptedException e) {
+                throw new RuntimeException("Unable to append to page process queue", e);
+            }
+        }
+    }
+
+    private void pageComplete() {
+        unprocessedPages.decrementAndGet();
+        if (unprocessedPages.get() == 0) {
+            for (int i = 0; i < nConsumers; i++) {
+                try {
+                    pageQueue.put(COMPLETE);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException("Unable to append to page process queue", e);
+                }
+            }
         }
     }
 
     private Page getPageTree(String url, Set<String> parentLinks) {
         CrawlResult crawlResult = results.get(url);
+        if(crawlResult == CrawlResult.PENDING) {
+            return null;
+        }
         parentLinks.add(url);
         Set<Page> pages = crawlResult.getInternalLinks().stream()
-                .filter(link -> !parentLinks.contains(link))
+                .filter(link -> !parentLinks.contains(link)) // Filter out circular references
                 .map(link -> getPageTree(link, parentLinks))
+                .filter(page -> page != null)
                 .collect(toSet());
         return new Page(url, pages, crawlResult.getExternalLinks(), crawlResult.getImages());
-    }
-
-    private boolean isInternal(String link) {
-        return link.indexOf(baseUrl) == 0 || (link.length() < 4 || !link.substring(0, 4).toLowerCase().equals("http"));
     }
 }
