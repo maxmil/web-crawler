@@ -1,6 +1,10 @@
 package just.another.webcrawler;
 
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Set;
+
+import static java.util.Collections.emptySet;
 
 public class Page {
 
@@ -14,6 +18,25 @@ public class Page {
         this.internalLinks = internalLinks;
         this.externalLinks = externalLinks;
         this.images = images;
+    }
+
+    private Page(Builder builder) {
+        name = builder.name;
+        internalLinks = builder.internalLinks;
+        externalLinks = builder.externalLinks;
+        images = builder.images;
+    }
+
+    public static Builder newBuilder(String name) {
+        return new Builder(name);
+    }
+
+    public static Builder newBuilder(Page copy) {
+        Builder builder = new Builder(copy.name);
+        builder.internalLinks = copy.internalLinks;
+        builder.externalLinks = copy.externalLinks;
+        builder.images = copy.images;
+        return builder;
     }
 
     public String getName() {
@@ -63,5 +86,35 @@ public class Page {
                 ", externalLinks=" + externalLinks +
                 ", images=" + images +
                 '}';
+    }
+
+    public static final class Builder {
+        private String name;
+        private Set<Page> internalLinks = emptySet();
+        private Set<String> externalLinks = emptySet();
+        private Set<String> images = emptySet();
+
+        private Builder(String name) {
+            this.name = name;
+        }
+
+        public Builder withInternalLinks(Page... val) {
+            internalLinks = new HashSet<>(Arrays.asList(val));
+            return this;
+        }
+
+        public Builder withExternalLinks(String... val) {
+            externalLinks = new HashSet<>(Arrays.asList(val));
+            return this;
+        }
+
+        public Builder withImages(String... val) {
+            images = new HashSet<>(Arrays.asList(val));
+            return this;
+        }
+
+        public Page build() {
+            return new Page(this);
+        }
     }
 }
