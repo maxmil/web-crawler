@@ -6,6 +6,9 @@ import java.util.Set;
 
 import static java.util.Collections.emptySet;
 
+/**
+ * Recursive structure and immutable bean that represents a page in the site map
+ */
 public class Page {
 
     private final String name;

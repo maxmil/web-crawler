@@ -4,6 +4,9 @@ import java.util.Set;
 
 import static java.util.Collections.emptySet;
 
+/**
+ * An immutable bean that holds the results of a page crawl
+ */
 public class CrawlResult {
 
     public static final CrawlResult EMPTY = new CrawlResult(emptySet(), emptySet(), emptySet());

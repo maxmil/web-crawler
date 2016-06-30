@@ -13,6 +13,11 @@ import java.util.concurrent.Executors;
 import static java.lang.System.exit;
 import static java.util.stream.Collectors.joining;
 
+/**
+ * The main point of entry.
+ *
+ * A WebCrawler submits PageCrawlers and waits for a result before gathering textual output which it writes to a file.
+ */
 public class WebCrawler {
 
     private static final Logger logger = LoggerFactory.getLogger(WebCrawler.class);
@@ -32,7 +37,7 @@ public class WebCrawler {
         int nThreads;
         try {
             baseUrl = args[0];
-            nThreads = args.length > 2 ? Integer.parseInt(args[2]) : 1;
+            nThreads = args.length > 1 ? Integer.parseInt(args[1]) : 1;
         } catch (Exception e) {
             System.err.println("Usage: web-crawler <site> [threads]\n" +
                     "   site     The absolute URL of the site to crawl\n" +

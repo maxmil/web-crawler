@@ -3,12 +3,18 @@ package just.another.webcrawler;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static java.util.stream.Collectors.toSet;
 
+/**
+ * Uses a BlockingQueue to act as a producer of pages that can be crawled concurrently.
+ *
+ * All CrawlResults are gathered in a Map from which the site map can be constructed.
+ */
 public class PageProcessor {
 
     // Used as a poisoned pill to instruct consumers of the queue that they can shut down
@@ -16,7 +22,7 @@ public class PageProcessor {
 
     private final String baseUrl;
     private final Map<String, CrawlResult> results = new ConcurrentHashMap<>();
-    private final LinkedBlockingQueue<String> pageQueue = new LinkedBlockingQueue<>();
+    private final BlockingQueue<String> pageQueue = new LinkedBlockingQueue<>();
     private final AtomicInteger unprocessedPages = new AtomicInteger();
     private final int nConsumers;
 
@@ -28,9 +34,7 @@ public class PageProcessor {
 
     public String getNextPage() {
         try {
-            String url = pageQueue.take();
-            results.put(url, CrawlResult.PENDING);
-            return url;
+            return pageQueue.take();
         } catch (InterruptedException e) {
             throw new RuntimeException("Unable to get next page from process queue", e);
         }
@@ -51,7 +55,7 @@ public class PageProcessor {
     }
 
     private void addLinkToQueue(String url) {
-        if (results.putIfAbsent(url, CrawlResult.EMPTY) == null) {
+        if (results.putIfAbsent(url, CrawlResult.PENDING) == null) {
             unprocessedPages.incrementAndGet();
             try {
                 pageQueue.put(url);
@@ -62,8 +66,7 @@ public class PageProcessor {
     }
 
     private void pageComplete() {
-        unprocessedPages.decrementAndGet();
-        if (unprocessedPages.get() == 0) {
+        if (unprocessedPages.decrementAndGet() == 0) {
             for (int i = 0; i < nConsumers; i++) {
                 try {
                     pageQueue.put(COMPLETE);

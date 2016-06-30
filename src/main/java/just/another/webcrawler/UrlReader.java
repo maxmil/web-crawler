@@ -8,6 +8,9 @@ import java.nio.charset.StandardCharsets;
 
 import static java.util.stream.Collectors.joining;
 
+/**
+ * Simple class that reads the contents of a URL. Having this in it's own class allows for mocking in test.
+ */
 public class UrlReader {
 
     public String read(String url) throws IOException {
